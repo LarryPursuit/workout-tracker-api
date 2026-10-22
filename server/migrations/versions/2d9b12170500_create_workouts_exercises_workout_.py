@@ -1,0 +1,59 @@
+"""create workouts, exercises, workout_exercises
+
+Revision ID: 2d9b12170500
+Revises: 
+Create Date: 2026-10-22 10:28:44.556539
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision = '2d9b12170500'
+down_revision = None
+branch_labels = None
+depends_on = None
+
+
+def upgrade():
+    op.create_table('exercises',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('category', sa.String(), nullable=False),
+    sa.Column('equipment_needed', sa.Boolean(), nullable=False),
+    sa.CheckConstraint("category IN ('strength', 'cardio', 'flexibility', 'balance', 'mobility')", name=op.f('ck_exercises_category_allowed')),
+    sa.CheckConstraint('length(trim(name)) > 0', name=op.f('ck_exercises_name_not_blank')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_exercises')),
+    sa.UniqueConstraint('name', name=op.f('uq_exercises_name'))
+    )
+    op.create_table('workouts',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('date', sa.Date(), nullable=False),
+    sa.Column('duration_minutes', sa.Integer(), nullable=False),
+    sa.Column('notes', sa.Text(), nullable=True),
+    sa.CheckConstraint('duration_minutes > 0', name=op.f('ck_workouts_duration_minutes_positive')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_workouts'))
+    )
+    op.create_table('workout_exercises',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('workout_id', sa.Integer(), nullable=False),
+    sa.Column('exercise_id', sa.Integer(), nullable=False),
+    sa.Column('reps', sa.Integer(), nullable=True),
+    sa.Column('sets', sa.Integer(), nullable=True),
+    sa.Column('duration_seconds', sa.Integer(), nullable=True),
+    sa.CheckConstraint('duration_seconds > 0', name=op.f('ck_workout_exercises_duration_seconds_positive')),
+    sa.CheckConstraint('reps > 0', name=op.f('ck_workout_exercises_reps_positive')),
+    sa.CheckConstraint('reps IS NOT NULL OR sets IS NOT NULL OR duration_seconds IS NOT NULL', name=op.f('ck_workout_exercises_has_measurement')),
+    sa.CheckConstraint('sets > 0', name=op.f('ck_workout_exercises_sets_positive')),
+    sa.ForeignKeyConstraint(['exercise_id'], ['exercises.id'], name=op.f('fk_workout_exercises_exercise_id_exercises')),
+    sa.ForeignKeyConstraint(['workout_id'], ['workouts.id'], name=op.f('fk_workout_exercises_workout_id_workouts')),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_workout_exercises')),
+    sa.UniqueConstraint('workout_id', 'exercise_id', name='uq_workout_exercise_pair')
+    )
+
+
+def downgrade():
+    op.drop_table('workout_exercises')
+    op.drop_table('workouts')
+    op.drop_table('exercises')
